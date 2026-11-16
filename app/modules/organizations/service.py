@@ -34,7 +34,9 @@ def get_organization(db: Session, org_id: int) -> Organization | None:
     return org
 
 
-def create_organization(db: Session, data: OrganizationCreate) -> Organization:
+def create_organization(
+    db: Session, data: OrganizationCreate, user_id: int
+) -> Organization:
     required_level = REQUIRED_PARENT_LEVEL[data.level]
 
     if required_level is None:
@@ -51,24 +53,27 @@ def create_organization(db: Session, data: OrganizationCreate) -> Organization:
                 f"Parent of {data.level.value} must be {required_level.value}"
             )
 
-    org = Organization(**data.model_dump())
+    org = Organization(
+        **data.model_dump(),
+        created_by_id=user_id,
+        updated_by_id=user_id,
+    )
     db.add(org)
     db.commit()
     db.refresh(org)
     return org
 
-
 def update_organization(
-    db: Session, org: Organization, data: OrganizationUpdate
+    db: Session, org: Organization, data: OrganizationUpdate, user_id: int
 ) -> Organization:
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(org, field, value)
+    org.updated_by_id = user_id
     db.commit()
     db.refresh(org)
     return org
 
-
-def delete_organization(db: Session, org: Organization) -> None:
+def delete_organization(db: Session, org: Organization, user_id: int) -> None:
     has_children = db.scalar(
         select(Organization.id)
         .where(Organization.parent_id == org.id, Organization.is_deleted.is_(False))
@@ -78,4 +83,5 @@ def delete_organization(db: Session, org: Organization) -> None:
         raise OrganizationRuleError("Organization has child organizations")
 
     org.is_deleted = True
+    org.updated_by_id = user_id
     db.commit()
