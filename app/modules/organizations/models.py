@@ -2,7 +2,7 @@ import enum
 
 from sqlalchemy import Boolean, Enum, ForeignKey, String, true
 from sqlalchemy.orm import Mapped, mapped_column
-
+from app.core.mixins import AuditMixin, SoftDeleteMixin, TimestampMixin
 from app.core.database import Base
 from app.core.mixins import SoftDeleteMixin, TimestampMixin
 
@@ -14,7 +14,7 @@ class OrganizationLevel(str, enum.Enum):
     branch = "branch"
 
 
-class Organization(Base, TimestampMixin, SoftDeleteMixin):
+class Organization(Base, TimestampMixin, SoftDeleteMixin, AuditMixin):
     __tablename__ = "organizations"
 
     id: Mapped[int] = mapped_column(primary_key=True)
