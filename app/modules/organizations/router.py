@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.modules.auth.dependencies import require_roles
+from app.modules.auth.access import get_visible_org_ids
+from app.modules.auth.dependencies import get_current_user, require_roles
 from app.modules.auth.models import User, UserRole
 from app.modules.organizations import service
 from app.modules.organizations.schemas import (
@@ -14,7 +15,6 @@ from app.modules.organizations.schemas import (
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
 require_superadmin = require_roles(UserRole.superadmin)
-require_full_view = require_roles(UserRole.superadmin, UserRole.ministry)
 
 
 @router.get("/", response_model=list[OrganizationRead])
@@ -22,22 +22,25 @@ def list_organizations(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
-    _: User = Depends(require_full_view),
+    current_user: User = Depends(get_current_user),
 ):
-    return service.get_organizations(db, skip, limit)
+    visible_ids = get_visible_org_ids(db, current_user)
+    return service.get_organizations(db, visible_ids, skip, limit)
 
 
 @router.get("/{org_id}", response_model=OrganizationRead)
 def read_organization(
     org_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(require_full_view),
+    current_user: User = Depends(get_current_user),
 ):
+    visible_ids = get_visible_org_ids(db, current_user)
+    if visible_ids is not None and org_id not in visible_ids:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Organization not found")
     org = service.get_organization(db, org_id)
     if org is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Organization not found")
     return org
-
 
 @router.post("/", response_model=OrganizationRead, status_code=status.HTTP_201_CREATED)
 def create_organization(

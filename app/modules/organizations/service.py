@@ -16,14 +16,16 @@ class OrganizationRuleError(Exception):
     """Raised when an organization tree rule is violated."""
 
 
-def get_organizations(db: Session, skip: int = 0, limit: int = 50) -> list[Organization]:
-    stmt = (
-        select(Organization)
-        .where(Organization.is_deleted.is_(False))
-        .order_by(Organization.id)
-        .offset(skip)
-        .limit(limit)
-    )
+def get_organizations(
+    db: Session,
+    visible_ids: list[int] | None,
+    skip: int = 0,
+    limit: int = 50,
+) -> list[Organization]:
+    stmt = select(Organization).where(Organization.is_deleted.is_(False))
+    if visible_ids is not None:
+        stmt = stmt.where(Organization.id.in_(visible_ids))
+    stmt = stmt.order_by(Organization.id).offset(skip).limit(limit)
     return list(db.scalars(stmt))
 
 
@@ -85,3 +87,18 @@ def delete_organization(db: Session, org: Organization, user_id: int) -> None:
     org.is_deleted = True
     org.updated_by_id = user_id
     db.commit()
+
+
+
+def get_subtree_ids(db: Session, root_id: int) -> list[int]:
+    tree = (
+        select(Organization.id)
+        .where(Organization.id == root_id, Organization.is_deleted.is_(False))
+        .cte("org_tree", recursive=True)
+    )
+    tree = tree.union_all(
+        select(Organization.id)
+        .join(tree, Organization.parent_id == tree.c.id)
+        .where(Organization.is_deleted.is_(False))
+    )
+    return list(db.scalars(select(tree.c.id)))
