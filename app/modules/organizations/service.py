@@ -5,12 +5,12 @@ from app.modules.organizations.models import Organization, OrganizationLevel
 from app.modules.organizations.schemas import OrganizationCreate, OrganizationUpdate
 
 REQUIRED_PARENT_LEVEL = {
+    OrganizationLevel.warehouse: None,
     OrganizationLevel.ministry: None,
     OrganizationLevel.region: OrganizationLevel.ministry,
     OrganizationLevel.district: OrganizationLevel.region,
     OrganizationLevel.branch: OrganizationLevel.district,
 }
-
 
 class OrganizationRuleError(Exception):
     """Raised when an organization tree rule is violated."""
@@ -43,7 +43,7 @@ def create_organization(
 
     if required_level is None:
         if data.parent_id is not None:
-            raise OrganizationRuleError("Ministry cannot have a parent")
+                    raise OrganizationRuleError(f"{data.level.value} cannot have a parent")
     else:
         if data.parent_id is None:
             raise OrganizationRuleError(f"{data.level.value} requires a parent")

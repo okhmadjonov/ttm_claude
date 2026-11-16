@@ -10,11 +10,11 @@ from app.core.mixins import AuditMixin, SoftDeleteMixin, TimestampMixin
 
 class UserRole(str, enum.Enum):
     superadmin = "superadmin"
+    warehouse = "warehouse"
     ministry = "ministry"
     region = "region"
     district = "district"
     branch = "branch"
-
 
 class User(Base, TimestampMixin, SoftDeleteMixin, AuditMixin):
     __tablename__ = "users"

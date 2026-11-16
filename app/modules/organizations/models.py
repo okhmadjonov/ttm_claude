@@ -8,11 +8,11 @@ from app.core.mixins import SoftDeleteMixin, TimestampMixin
 
 
 class OrganizationLevel(str, enum.Enum):
+    warehouse = "warehouse"
     ministry = "ministry"
     region = "region"
     district = "district"
     branch = "branch"
-
 
 class Organization(Base, TimestampMixin, SoftDeleteMixin, AuditMixin):
     __tablename__ = "organizations"
